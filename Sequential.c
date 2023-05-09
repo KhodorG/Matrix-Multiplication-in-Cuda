@@ -1,95 +1,80 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/time.h> // for gettimeofday function
-#include <math.h>
+#include <sys/time.h>
 
-#define M 1024 // Number of rows in matrix A
-#define K 1024 // Number of columns in matrix A and rows in matrix B
-#define N 1024 // Number of columns in matrix B and resulting matrix C
-
-void matrixMul(float *A, float *B, float *C)
-{
-    for (int i = 0; i < M; i++)
-    {
-        for (int j = 0; j < N; j++)
-        {
-            float sum = 0.0f;
-            for (int k = 0; k < K; k++)
-            {
-                sum += A[i * K + k] * B[k * N + j];
-            }
-            C[i * N + j] = sum;
-        }
-    }
-}
+#define M 1000 // Number of rows in matrix A
+#define K 1000 // Number of columns in matrix A and rows in matrix B
+#define N 1000 // Number of columns in matrix B and resulting matrix C
 
 int main()
 {
-    float *h_A, *h_B, *h_C; // Host matrices
+    int **A, **B, **C;         // Define matrices A, B, and C as pointers to pointers
+    struct timeval start, end; // Define time variables
 
-    size_t size_A = M * K * sizeof(float);
-    size_t size_B = K * N * sizeof(float);
-    size_t size_C = M * N * sizeof(float);
+    // Allocate memory for matrices A, B, and C
+    A = (int **)malloc(M * sizeof(int *));
+    B = (int **)malloc(K * sizeof(int *));
+    C = (int **)malloc(M * sizeof(int *));
+    for (int i = 0; i < M; i++)
+    {
+        A[i] = (int *)malloc(K * sizeof(int));
+        C[i] = (int *)malloc(N * sizeof(int));
+    }
+    for (int i = 0; i < K; i++)
+    {
+        B[i] = (int *)malloc(N * sizeof(int));
+    }
 
-    // Allocate memory for host matrices
-    h_A = (float *)malloc(size_A);
-    h_B = (float *)malloc(size_B);
-    h_C = (float *)malloc(size_C);
-
-    // Initialize host matrices
+    // Initialize matrices A and B
     for (int i = 0; i < M; i++)
     {
         for (int j = 0; j < K; j++)
         {
-            h_A[i * K + j] = i + j;
+            A[i][j] = i + j;
         }
     }
     for (int i = 0; i < K; i++)
     {
         for (int j = 0; j < N; j++)
         {
-            h_B[i * N + j] = i - j;
+            B[i][j] = i - j;
         }
     }
 
-    // Measure start time
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
-
     // Perform matrix multiplication
-    matrixMul(h_A, h_B, h_C);
-
-    // Measure end time
-    gettimeofday(&end, NULL);
-
-    // Calculate elapsed time in milliseconds
-    double elapsedTime = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0;
-
-    printf("Matrix multiplication successful! Elapsed time: %.3f ms\n", elapsedTime);
-
-    // Verify result
+    gettimeofday(&start, NULL); // Start timer
     for (int i = 0; i < M; i++)
     {
         for (int j = 0; j < N; j++)
         {
-            float sum = 0.0f;
-            for (int k = 0; k < K; k++)
+            int sum = 0;
+            for (int p = 0; p < K; p++)
             {
-                sum += h_A[i * K + k] * h_B[k * N + j];
+                sum += A[i][p] * B[p][j];
             }
-            if (fabs(h_C[i * N + j] - sum) > 1e-5)
-            {
-                printf("Error: mismatch at (%d, %d): expected %f, actual %f\n",
-                       i, j, sum, h_C[i * N + j]);
-                return -1;
-            }
+            C[i][j] = sum;
         }
     }
+    gettimeofday(&end, NULL); // End timer
 
-    // Free memory
-    free(h_A);
-    free(h_B);
-    free(h_C);
+    double time_spent = (end.tv_sec - start.tv_sec) * 1000.0 + (end.tv_usec - start.tv_usec) / 1000.0; // Calculate execution time in milliseconds
+
+    // Print the execution time
+    printf("Execution time: %.3f ms\n", time_spent);
+
+    // Free memory for matrices A, B, and C
+    for (int i = 0; i < M; i++)
+    {
+        free(A[i]);
+        free(C[i]);
+    }
+    for (int i = 0; i < K; i++)
+    {
+        free(B[i]);
+    }
+    free(A);
+    free(B);
+    free(C);
 
     return 0;
 }
